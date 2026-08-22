@@ -1,13 +1,18 @@
 name: Bump Terminal.Gui
 
 # Keeps <TerminalGuiVersion> in Directory.Build.props tracking Terminal.Gui's
-# NuGet publishes. Policy: develop tracks TG's develop pre-releases (Editor is
-# a continuous canary for TG API churn); a stable Editor release requires a
-# stable pin (enforced by prepare-release.yml).
+# latest *stable* NuGet release (no `-` in the version). Develop pre-releases
+# (`*-develop.*`, `*-beta.*`, …) are ignored by the automatic path; a human
+# can still pin one via workflow_dispatch (channel=prerelease, or an explicit
+# version). A stable Editor release requires a stable pin (prepare-release.yml).
 #
 # Flow:
 #   - Resolve the newest TG version on NuGet for the requested channel
-#     (default: prerelease = newest overall; stable = newest without a `-`).
+#     (default: stable = newest without a `-`; prerelease = newest overall).
+#   - A TG publish dispatch is used only when its payload version is itself
+#     stable; a `-develop` payload falls through to "latest stable" lookup.
+#   - Never downgrade: skip if the target is not strictly newer than the
+#     current pin in NuGet's flat-container order.
 #   - If it differs from the current pin: bump, build, run the test suites.
 #   - Green → commit directly to develop (push uses RELEASE_PAT so the push
 #     triggers release.yml, publishing a new Editor pre-release and dispatching
@@ -17,10 +22,12 @@ name: Bump Terminal.Gui
 #
 # Triggers:
 #   - repository_dispatch `terminal-gui-published` (sent by tui-cs/Terminal.Gui's
-#     publish workflow; payload: { "version": "2.4.6-develop.10" })
-#   - schedule: fallback poll, in case the dispatch is missing/not configured
-#   - workflow_dispatch: manual, with channel selection (use channel=stable to
-#     pin a stable TG ahead of an Editor stable release)
+#     publish workflow; payload: { "version": "2.4.18" } — pre-release
+#     payloads are ignored)
+#   - schedule: fallback poll for the latest stable, in case a dispatch is
+#     missing/not configured
+#   - workflow_dispatch: manual, with channel selection (use channel=prerelease
+#     to canary a TG develop build)
 
 on:
   repository_dispatch:
@@ -34,9 +41,9 @@ on:
         required: true
         type: choice
         options:
-          - prerelease
           - stable
-        default: prerelease
+          - prerelease
+        default: stable
       version:
         description: 'Explicit Terminal.Gui version (optional; overrides channel)'
         required: false
@@ -52,6 +59,10 @@ concurrency:
 
 jobs:
   bump:
+    # Pre-release TG publishes (payload version contains `-`) must not even
+    # start a runner; the automatic path only tracks stables. Schedule,
+    # workflow_dispatch, and a stable dispatch still run.
+    if: github.event_name != 'repository_dispatch' || !contains(github.event.client_payload.version, '-')
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.RELEASE_PAT }}
@@ -73,24 +84,35 @@ jobs:
         id: resolve
         shell: bash
         run: |
+          set -euo pipefail
+
           CURRENT=$(sed -n 's|.*<TerminalGuiVersion[^>]*>\(.*\)</TerminalGuiVersion>.*|\1|p' Directory.Build.props | head -1)
           if [ -z "$CURRENT" ]; then
             echo "::error::Could not read <TerminalGuiVersion> from Directory.Build.props."
             exit 1
           fi
 
-          EXPLICIT="${{ github.event.inputs.version || github.event.client_payload.version }}"
-          CHANNEL="${{ github.event.inputs.channel || 'prerelease' }}"
+          MANUAL="${{ github.event.inputs.version }}"
+          DISPATCH="${{ github.event.client_payload.version }}"
+          CHANNEL="${{ github.event.inputs.channel || 'stable' }}"
 
-          if [ -n "$EXPLICIT" ]; then
-            TARGET="$EXPLICIT"
+          # Flat-container index is sorted ascending by NuGet semver.
+          INDEX=$(curl -fsS https://api.nuget.org/v3-flatcontainer/terminal.gui/index.json)
+
+          if [ -n "$MANUAL" ]; then
+            TARGET="$MANUAL"
+            echo "Using explicit version from workflow_dispatch: ${TARGET}"
+          elif [ -n "$DISPATCH" ] && [[ "$DISPATCH" != *-* ]]; then
+            TARGET="$DISPATCH"
+            echo "Using stable version from TG publish dispatch: ${TARGET}"
+          elif [ "$CHANNEL" = "prerelease" ]; then
+            TARGET=$(echo "$INDEX" | jq -r '.versions | last')
+            echo "Resolved newest TG (including pre-release): ${TARGET}"
           else
-            # Flat-container index is sorted ascending by NuGet semver.
-            INDEX=$(curl -fsS https://api.nuget.org/v3-flatcontainer/terminal.gui/index.json)
-            if [ "$CHANNEL" = "stable" ]; then
-              TARGET=$(echo "$INDEX" | jq -r '[.versions[] | select(contains("-") | not)] | last')
-            else
-              TARGET=$(echo "$INDEX" | jq -r '.versions | last')
+            TARGET=$(echo "$INDEX" | jq -r '[.versions[] | select(contains("-") | not)] | last')
+            echo "Resolved newest stable TG: ${TARGET}"
+            if [ -n "$DISPATCH" ]; then
+              echo "Ignoring pre-release dispatch payload '${DISPATCH}' (auto-bump tracks stables only)."
             fi
           fi
 
@@ -105,13 +127,29 @@ jobs:
           if [ "$TARGET" = "$CURRENT" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "Pin already at ${CURRENT}; nothing to do."
-          elif git ls-remote --heads origin "bump/terminal-gui-${TARGET}" | grep -q .; then
+            exit 0
+          fi
+
+          # NuGet-newer check: the flat-container is sorted by NuGet semver, so
+          # a lower index is older. Skip downgrades (e.g. 2.4.18-develop.5 is
+          # already newer than stable 2.4.17). A target not yet in the index
+          # (just-published stable) is treated as newer; the wait step confirms.
+          T_POS=$(echo "$INDEX" | jq -r --arg v "$TARGET" '.versions | index($v) // empty')
+          C_POS=$(echo "$INDEX" | jq -r --arg v "$CURRENT" '.versions | index($v) // empty')
+          if [ -n "$T_POS" ] && [ -n "$C_POS" ] && [ "$T_POS" -le "$C_POS" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Target ${TARGET} is not newer than current pin ${CURRENT} (NuGet order); skipping."
+            exit 0
+          fi
+
+          if git ls-remote --heads origin "bump/terminal-gui-${TARGET}" | grep -q .; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "::warning::bump/terminal-gui-${TARGET} already exists (a previous bump to ${TARGET} failed CI). Skipping."
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "Bumping TerminalGuiVersion: ${CURRENT} → ${TARGET}"
+            exit 0
           fi
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "Bumping TerminalGuiVersion: ${CURRENT} → ${TARGET}"
 
       - name: Wait for NuGet flat-container to index the target
         if: steps.resolve.outputs.changed == 'true'

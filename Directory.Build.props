@@ -28,11 +28,12 @@
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
 
     <!--
-      Minimum supported Terminal.Gui (the NuGet dependency floor). On develop this
-      tracks TG's develop pre-releases and is bumped automatically by
-      .github/workflows/bump-terminal-gui.yml when TG publishes; a stable Editor
-      release requires a stable value here (prepare-release.yml gates on it,
-      and NuGet forbids stable→prerelease dependencies anyway).
+      Minimum supported Terminal.Gui (the NuGet dependency floor). Auto-bumped to
+      the latest stable (non-pre-release) TG by .github/workflows/bump-terminal-gui.yml
+      when TG publishes a release; develop pre-releases are ignored unless a human
+      runs that workflow with channel=prerelease. A stable Editor release requires
+      a stable value here (prepare-release.yml gates on it, and NuGet forbids
+      stable→prerelease dependencies anyway).
       Override per-build via -p:TerminalGuiVersion=<x>; use -p:UseLocalTerminalGui=true
       to build against the ../Terminal.Gui enlistment instead (see Directory.Build.targets).
     -->

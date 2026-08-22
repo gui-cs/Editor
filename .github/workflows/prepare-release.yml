@@ -66,7 +66,7 @@ jobs:
             exit 1
           fi
           if echo "$TG_PIN" | grep -q -- '-'; then
-            echo "::error::TerminalGuiVersion is '${TG_PIN}', a pre-release. A stable Editor release must depend on a stable Terminal.Gui (NuGet rejects stable→prerelease dependencies, NU5104). Pin a stable TG on develop first (e.g. via the Bump Terminal.Gui workflow with channel=stable)."
+            echo "::error::TerminalGuiVersion is '${TG_PIN}', a pre-release. A stable Editor release must depend on a stable Terminal.Gui (NuGet rejects stable→prerelease dependencies, NU5104). Pin a stable TG on develop first (the Bump Terminal.Gui workflow defaults to channel=stable; run it, or wait for the next TG stable publish)."
             exit 1
           fi
           echo "TerminalGuiVersion pin is stable: ${TG_PIN}"
