@@ -139,8 +139,17 @@ public partial class Editor : View
             SetTextDirect (value);
 
             _ownTextSetterActive = true;
-            RaiseTextChanged ();
-            _ownTextSetterActive = false;
+
+            try
+            {
+                RaiseTextChanged ();
+            }
+            finally
+            {
+                // Reset even when a TextChanged subscriber throws — a stuck flag would
+                // silently disable Document sync for every later polymorphic base set.
+                _ownTextSetterActive = false;
+            }
         }
     }
 
