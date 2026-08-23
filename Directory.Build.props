@@ -37,7 +37,8 @@
       Override per-build via -p:TerminalGuiVersion=<x>; use -p:UseLocalTerminalGui=true
       to build against the ../Terminal.Gui enlistment instead (see Directory.Build.targets).
     -->
-    <TerminalGuiVersion Condition="'$(TerminalGuiVersion)' == ''">2.4.18-develop.5</TerminalGuiVersion>
+    <!-- TEMP: pin to Terminal.Gui PR 5416 (2.5.0 CM-to-MEC) via the local nupkg until 2.5.x ships. -->
+    <TerminalGuiVersion Condition="'$(TerminalGuiVersion)' == ''">2.5.0-tig-remove-cm-followup.2</TerminalGuiVersion>
   </PropertyGroup>
 
   <ItemGroup>

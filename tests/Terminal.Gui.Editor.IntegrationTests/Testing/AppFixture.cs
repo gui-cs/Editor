@@ -25,7 +25,7 @@ namespace Terminal.Gui.Editor.IntegrationTests.Testing;
 ///         <c>Application.Init()</c> is that each <see cref="IApplication" /> is
 ///         <see cref="System.Threading.ThreadLocal{T}" />-isolated. xUnit runs test collections in
 ///         parallel; never call <c>Application.Init()</c> (the static, process-global form) from a
-///         test, never enable <c>ConfigurationManager</c>, and never mutate process-global statics
+///         test, never mutate the shared <c>TuiConfigurationBuilder</c> facades, and never mutate process-global statics
 ///         that Terminal.Gui itself reads (<c>Logging.Logger</c>, <c>Trace.EnabledCategories</c>,
 ///         etc.). Tests that legitimately must do so opt out via
 ///         <c>[CollectionDefinition(name, DisableParallelization = true)]</c>; see

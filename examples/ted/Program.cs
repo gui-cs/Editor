@@ -9,8 +9,8 @@ Hosting.ConfigureLogging ();
 Hosting.EnableTracing ();
 
 // Load settings through Terminal.Gui's Microsoft.Extensions.Configuration builder
-// (TuiConfigurationBuilder), applied before TedApp is constructed. Requires Terminal.Gui
-// >= 2.4.15 (the TerminalGuiVersion pin); there is no ConfigurationManager fallback.
+// (TuiConfigurationBuilder), applied before TedApp is constructed. Terminal.Gui 2.5
+// removed the legacy ConfigurationManager; this is the only config path.
 TerminalGuiConfigurationBootstrap.Apply ();
 
 using IApplication app = Application.Create ();
@@ -40,7 +40,9 @@ if (!string.IsNullOrWhiteSpace (requestedPath))
     {
         // Synchronous (non-marshalled) load completes before app.Run, so the very first paint
         // shows the document — no blank-buffer-then-fill flash for the common small-file case.
-        ted.OpenFileAsync (requestedPath).GetAwaiter ().GetResult ();
+        // OpenFileBlocking clears Terminal.Gui 2.5's main-loop SynchronizationContext (installed
+        // at Init, tui-cs/Terminal.Gui#5588) for the wait so it cannot deadlock on continuations.
+        ted.OpenFileBlocking (requestedPath);
     }
     else
     {

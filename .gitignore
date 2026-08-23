@@ -19,6 +19,9 @@ project.fragment.lock.json
 # NuGet
 *.nupkg
 *.snupkg
+# TEMP: vendored Terminal.Gui 2.5.0 from PR 5416 until 2.5.x ships on nuget.org.
+!local_packages/*.nupkg
+!local_packages/*.snupkg
 
 # Visual Studio / IDE
 .vs/

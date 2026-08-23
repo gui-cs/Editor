@@ -238,7 +238,9 @@ public class TedAppTests
             await using AppFixture<TedApp> fx = new (() =>
             {
                 TedApp app = new (configPath: TedTestConfig.NewPath ());
-                app.OpenFileAsync (filePath).GetAwaiter ().GetResult ();
+                // OpenFileBlocking clears TG 2.5's main-loop SynchronizationContext (installed
+                // at Init) for the wait so blocking here cannot deadlock on continuations.
+                app.OpenFileBlocking (filePath);
 
                 return app;
             });
