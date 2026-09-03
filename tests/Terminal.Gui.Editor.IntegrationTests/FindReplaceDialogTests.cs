@@ -12,7 +12,6 @@ namespace Terminal.Gui.Editor.IntegrationTests;
 ///     ANSI snapshot tests for <see cref="FindReplaceDialog" /> layout and usability.
 ///     Verifies the dialog's visual appearance — tabs, checkboxes, hotkeys, sizing.
 /// </summary>
-[Collection (nameof (SnapshotCollection))]
 public sealed class FindReplaceDialogTests
 {
     private static readonly InputInjectionOptions Direct = new () { Mode = InputInjectionMode.Direct };

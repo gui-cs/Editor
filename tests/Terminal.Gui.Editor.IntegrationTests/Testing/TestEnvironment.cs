@@ -1,4 +1,7 @@
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using Terminal.Gui.Configuration;
+using Terminal.Gui.Drawing;
 using Terminal.Gui.Text;
 
 namespace Terminal.Gui.Editor.IntegrationTests.Testing;
@@ -10,6 +13,16 @@ namespace Terminal.Gui.Editor.IntegrationTests.Testing;
 /// </summary>
 internal static class TestEnvironment
 {
+    private static readonly MethodInfo LoadHardCodedSchemes =
+        typeof (SchemeManager).GetMethod (
+            "LoadToHardCodedDefaults",
+            BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException (
+            "SchemeManager.LoadToHardCodedDefaults is missing. Snapshots cannot reset the process-global scheme table.");
+
+    private static readonly Lock PristineLock = new ();
+    private static Dictionary<string, Scheme>? _pristineSchemes;
+
     [ModuleInitializer]
     internal static void Init ()
     {
@@ -20,5 +33,53 @@ internal static class TestEnvironment
         // Dictionary.FindValue on that first write. Populate the latest table on
         // this thread before xUnit starts the suite.
         _ = "x".GetColumns ();
+
+        // Capture hardcoded schemes before any Application.Init can theme the
+        // cached Menu/Dialog instances in place.
+        LoadHardCodedSchemes.Invoke (null, null);
+        CapturePristineSchemes ();
+    }
+
+    /// <summary>
+    ///     Replaces <see cref="SchemeManager" />'s process-global table with the hardcoded
+    ///     defaults. <see cref="AppFixture{TRunnable}" /> calls this after Init so snapshot
+    ///     <c>ToAnsi</c> does not inherit a Base scheme leftover from another test
+    ///     (White/Black <c>[97m[40m</c> vs the golden default <c>[39m[49m</c>).
+    /// </summary>
+    internal static void RestoreHardCodedSchemes ()
+    {
+        LoadHardCodedSchemes.Invoke (null, null);
+
+        // HardCodedDictionary returns cached Scheme instances. Other tests mutate
+        // those objects in place; putting the cache back would restore the dirty
+        // colors. AddScheme clones from the module-init snapshot so each fixture
+        // gets a private copy.
+        lock (PristineLock)
+        {
+            CapturePristineSchemes ();
+
+            foreach (KeyValuePair<string, Scheme> kv in _pristineSchemes!)
+            {
+                SchemeManager.AddScheme (kv.Key, new Scheme (kv.Value));
+            }
+        }
+    }
+
+    private static void CapturePristineSchemes ()
+    {
+        if (_pristineSchemes is not null)
+        {
+            return;
+        }
+
+        _pristineSchemes = new Dictionary<string, Scheme> (StringComparer.InvariantCultureIgnoreCase);
+
+        foreach (KeyValuePair<string, Scheme?> kv in SchemeManager.Schemes)
+        {
+            if (kv.Value is { } scheme)
+            {
+                _pristineSchemes[kv.Key] = new Scheme (scheme);
+            }
+        }
     }
 }

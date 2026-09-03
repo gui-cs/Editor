@@ -15,7 +15,6 @@ namespace Terminal.Gui.Editor.IntegrationTests;
 ///     ANSI. The recorded <c>__snapshots__/*.ans</c> can be <c>cat</c>'d to see the exact look
 ///     (colors, selection highlight, multi-caret cells) without running the app interactively.
 /// </summary>
-[Collection (nameof (SnapshotCollection))]
 public class EditorSnapshotTests
 {
     private static readonly InputInjectionOptions Direct = new () { Mode = InputInjectionMode.Direct };

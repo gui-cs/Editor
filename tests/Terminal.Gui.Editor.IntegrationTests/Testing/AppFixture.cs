@@ -58,6 +58,10 @@ public sealed class AppFixture<TRunnable> : IAsyncDisposable
         // SupportsTrueColor is true (Windows/macOS CI) and 16-color SGR when it is not (Linux).
         App.Driver!.Force16Colors = true;
 
+        // SchemeManager is process-global. Reset to hardcoded defaults so this test does
+        // not inherit a Base scheme leftover from a parallel or earlier AppFixture.
+        TestEnvironment.RestoreHardCodedSchemes ();
+
         // Resize via the driver — same path TG's UnitTestsParallelizable use. Setting `App.Screen`
         // directly hangs on Windows CI runners that lack a real console.
         App.Driver!.SetScreenSize (width, height);
