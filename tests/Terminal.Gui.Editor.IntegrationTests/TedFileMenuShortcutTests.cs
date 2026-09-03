@@ -16,6 +16,7 @@ namespace Terminal.Gui.Editor.IntegrationTests;
 ///     (Ctrl+N, Ctrl+O, Ctrl+S, Ctrl+Shift+S) and that the Save As dialog is titled correctly.
 ///     Uses <see cref="AnsiSnapshot" /> for render verification.
 /// </summary>
+[Collection (nameof (SnapshotCollection))]
 public class TedFileMenuShortcutTests
 {
     private static readonly InputInjectionOptions Direct = new () { Mode = InputInjectionMode.Direct };

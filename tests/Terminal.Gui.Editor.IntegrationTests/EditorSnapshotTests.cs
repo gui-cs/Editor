@@ -15,6 +15,7 @@ namespace Terminal.Gui.Editor.IntegrationTests;
 ///     ANSI. The recorded <c>__snapshots__/*.ans</c> can be <c>cat</c>'d to see the exact look
 ///     (colors, selection highlight, multi-caret cells) without running the app interactively.
 /// </summary>
+[Collection (nameof (SnapshotCollection))]
 public class EditorSnapshotTests
 {
     private static readonly InputInjectionOptions Direct = new () { Mode = InputInjectionMode.Direct };
@@ -31,6 +32,24 @@ public class EditorSnapshotTests
         fx.Render ();
 
         AnsiSnapshot.Verify (fx.Driver, nameof (Plain_Document_Renders));
+    }
+
+    [Fact]
+    public async Task SingleLine_Renders_Newlines_As_Glyphs ()
+    {
+        await using AppFixture<EditorTestHost> fx = new (() => new EditorTestHost ("ab\ncd\nef"), W, 3);
+        fx.Top.Editor.Multiline = false;
+        fx.Top.Editor.SetFocus ();
+        fx.Render ();
+
+        // The document keeps its newlines; single-line mode flattens every visible line onto one
+        // row, rendering each newline as a visible ⏎ glyph (DrawSingleLineFlat). The ANSI golden
+        // locks that exact look.
+        Assert.Equal ("ab\ncd\nef", fx.Top.Editor.Document!.Text);
+        Assert.Equal (3, fx.Top.Editor.Document.LineCount);
+        Assert.Equal (1, fx.Top.Editor.Viewport.Height);
+
+        AnsiSnapshot.Verify (fx.Driver, nameof (SingleLine_Renders_Newlines_As_Glyphs));
     }
 
     [Fact]

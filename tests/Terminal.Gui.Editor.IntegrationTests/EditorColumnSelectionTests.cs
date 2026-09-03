@@ -15,6 +15,7 @@ namespace Terminal.Gui.Editor.IntegrationTests;
 ///     (per-row highlight, additional-caret cells, clamping) is locked without eyeballing.
 ///     <c>cat __snapshots__/&lt;name&gt;.ans</c> reproduces the exact screen.
 /// </summary>
+[Collection (nameof (SnapshotCollection))]
 public class EditorColumnSelectionTests
 {
     private static readonly InputInjectionOptions Direct = new () { Mode = InputInjectionMode.Direct };
