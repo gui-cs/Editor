@@ -54,6 +54,10 @@ public sealed class AppFixture<TRunnable> : IAsyncDisposable
         App = Application.Create ();
         App.Init (DriverRegistry.Names.ANSI);
 
+        // Pin 16-color ToAnsi so goldens match across OS. TG 2.5 emits truecolor RGB when
+        // SupportsTrueColor is true (Windows/macOS CI) and 16-color SGR when it is not (Linux).
+        App.Driver!.Force16Colors = true;
+
         // Resize via the driver — same path TG's UnitTestsParallelizable use. Setting `App.Screen`
         // directly hangs on Windows CI runners that lack a real console.
         App.Driver!.SetScreenSize (width, height);
