@@ -60,31 +60,6 @@ internal static class TestEnvironment
         }
     }
 
-    /// <summary>
-    ///     Replaces <see cref="SchemeManager" />'s process-global table with the hardcoded
-    ///     defaults. <see cref="AppFixture{TRunnable}" /> calls this after Init so snapshot
-    ///     <c>ToAnsi</c> does not inherit a Base scheme leftover from another test
-    ///     (White/Black <c>[97m[40m</c> vs the golden default <c>[39m[49m</c>).
-    /// </summary>
-    internal static void RestoreHardCodedSchemes ()
-    {
-        LoadHardCodedSchemes.Invoke (null, null);
-
-        // HardCodedDictionary returns cached Scheme instances. Other tests mutate
-        // those objects in place; putting the cache back would restore the dirty
-        // colors. AddScheme clones from the module-init snapshot so each fixture
-        // gets a private copy.
-        lock (PristineLock)
-        {
-            CapturePristineSchemes ();
-
-            foreach (KeyValuePair<string, Scheme> kv in _pristineSchemes!)
-            {
-                SchemeManager.AddScheme (kv.Key, new Scheme (kv.Value));
-            }
-        }
-    }
-
     private static void CapturePristineSchemes ()
     {
         if (_pristineSchemes is not null)

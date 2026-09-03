@@ -58,15 +58,21 @@ public sealed class AppFixture<TRunnable> : IAsyncDisposable
         // SupportsTrueColor is true (Windows/macOS CI) and 16-color SGR when it is not (Linux).
         App.Driver!.Force16Colors = true;
 
-        // SchemeManager is process-global. Reset to hardcoded defaults so this test does
-        // not inherit a Base scheme leftover from a parallel or earlier AppFixture.
-        TestEnvironment.RestoreHardCodedSchemes ();
-
         // Resize via the driver — same path TG's UnitTestsParallelizable use. Setting `App.Screen`
         // directly hangs on Windows CI runners that lack a real console.
         App.Driver!.SetScreenSize (width, height);
 
         Top = factory ();
+
+        // Per-view pin only. Do not rewrite SchemeManager from parallel fixtures
+        // (that races Init/draw and overwrites ThemeDropDown tests). Editor snapshots
+        // inherit this Base clone instead of the process-global table.
+        if (Top is EditorTestHost host)
+        {
+            TestEnvironment.PinPristineScheme (host, "Base");
+            TestEnvironment.PinPristineScheme (host.Editor, "Base");
+        }
+
         _session = App.Begin (Top) ??
                    throw new InvalidOperationException ("Application.Begin returned null — session was cancelled.");
     }
