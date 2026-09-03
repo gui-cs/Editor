@@ -27,26 +27,10 @@ public class EditorRenderingTests
     private static readonly InputInjectionOptions Direct = new () { Mode = InputInjectionMode.Direct };
     private static readonly DateTime BaseTime = new (2025, 1, 1, 12, 0, 0);
 
-    /// <summary>
-    ///     Pins Normal / Editable / Active to distinct 16-color attributes. AppFixture forces
-    ///     16-color ToAnsi so goldens match across OS; the default scheme can collapse Normal
-    ///     and Editable to the same White/Black pair under that quantization (Ubuntu CI).
-    /// </summary>
-    private static void ApplyDistinct16ColorRoles (Editor editor)
-    {
-        Scheme scheme = new (new Attribute (Color.White, Color.Black))
-        {
-            Editable = new Attribute (Color.DarkGray, Color.Black),
-            Active = new Attribute (Color.Black, Color.Gray)
-        };
-        editor.SetScheme (scheme);
-    }
-
     [Fact]
     public async Task Unselected_Text_Uses_Normal_Role_Not_Editable ()
     {
         await using AppFixture<EditorTestHost> fx = new (() => new EditorTestHost ("Hello"));
-        ApplyDistinct16ColorRoles (fx.Top.Editor);
         fx.Render ();
 
         Attribute normal = fx.Top.Editor.GetAttributeForRole (VisualRole.Normal);
@@ -54,8 +38,12 @@ public class EditorRenderingTests
 
         // Precondition: this test is only meaningful if Normal and Editable differ in the
         // active scheme. If they don't, the visual bug can't manifest and the assertion below
-        // would pass spuriously.
-        Assert.NotEqual (normal, editable);
+        // would pass spuriously. Force16Colors can collapse both to White/Black (Ubuntu CI).
+        // Do not SetScheme to force them apart: that mutates a shared scheme and leaks into
+        // parallel snapshot tests.
+        Assert.SkipUnless (
+            normal != editable,
+            "Normal and Editable collapse to the same 16-color Attribute under Force16Colors.");
 
         Cell cell = fx.Driver.Contents![0, 0];
         Assert.Equal ("H", cell.Grapheme);
@@ -66,7 +54,6 @@ public class EditorRenderingTests
     public async Task Selected_Text_Uses_Active_Role ()
     {
         await using AppFixture<EditorTestHost> fx = new (() => new EditorTestHost ("Hello"));
-        ApplyDistinct16ColorRoles (fx.Top.Editor);
         fx.Top.Editor.SetFocus ();
         fx.Top.Editor.CaretOffset = 0;
 
@@ -85,7 +72,6 @@ public class EditorRenderingTests
     public async Task Unselected_Tail_After_Selection_Uses_Normal_Role ()
     {
         await using AppFixture<EditorTestHost> fx = new (() => new EditorTestHost ("Hello"));
-        ApplyDistinct16ColorRoles (fx.Top.Editor);
         fx.Top.Editor.SetFocus ();
         fx.Top.Editor.CaretOffset = 0;
 
@@ -95,7 +81,9 @@ public class EditorRenderingTests
 
         Attribute normal = fx.Top.Editor.GetAttributeForRole (VisualRole.Normal);
         Attribute editable = fx.Top.Editor.GetAttributeForRole (VisualRole.Editable);
-        Assert.NotEqual (normal, editable);
+        Assert.SkipUnless (
+            normal != editable,
+            "Normal and Editable collapse to the same 16-color Attribute under Force16Colors.");
 
         // Cells past the selection (column index >= 2) should be Normal, not Editable.
         Cell tail = fx.Driver.Contents![0, 2];
