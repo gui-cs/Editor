@@ -37,8 +37,8 @@
       Override per-build via -p:TerminalGuiVersion=<x>; use -p:UseLocalTerminalGui=true
       to build against the ../Terminal.Gui enlistment instead (see Directory.Build.targets).
     -->
-    <!-- TEMP: public 2.5.0-develop.55 (TG #5416 / #5630 workstream 4). Swap to stable 2.5.x before merge. -->
-    <TerminalGuiVersion Condition="'$(TerminalGuiVersion)' == ''">2.5.0-develop.55</TerminalGuiVersion>
+    <!-- Public Terminal.Gui 2.5.0-beta.1 (TG #5630 ecosystem gate). -->
+    <TerminalGuiVersion Condition="'$(TerminalGuiVersion)' == ''">2.5.0-beta.1</TerminalGuiVersion>
   </PropertyGroup>
 
   <ItemGroup>
