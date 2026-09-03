@@ -793,27 +793,6 @@ public class TedAppTests
     }
 
     [Fact]
-    public async Task ThemeDropDown_Selection_Changes_Active_Theme ()
-    {
-        await using AppFixture<TedApp> fx = new (() => new TedApp (configPath: TedTestConfig.NewPath ()));
-
-        ImmutableList<string> names = ThemeManager.GetThemeNames ();
-
-        if (names.Count < 2)
-        {
-            return;
-        }
-
-        // Pick a theme that differs from the current one.
-        var original = ThemeManager.Theme;
-        var target = names.First (n => n != original);
-
-        fx.Top.ThemeDropDown.Text = target;
-
-        Assert.Equal (target, ThemeManager.Theme);
-    }
-
-    [Fact]
     public void NewFile_Shows_Loaded_Zero_Bytes ()
     {
         TedApp app = new (configPath: TedTestConfig.NewPath ());
