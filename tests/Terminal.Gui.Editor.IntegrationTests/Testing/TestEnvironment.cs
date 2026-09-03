@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Terminal.Gui.Text;
 
 namespace Terminal.Gui.Editor.IntegrationTests.Testing;
 
@@ -13,5 +14,11 @@ internal static class TestEnvironment
     internal static void Init ()
     {
         Environment.SetEnvironmentVariable ("DisableRealDriverIO", "1");
+
+        // Wcwidth 4.0.1 WideTable.GetTable does an unlocked Dictionary.TryGetValue
+        // beside a locked insert. Parallel Application.Init (macOS CI) can NRE in
+        // Dictionary.FindValue on that first write. Populate the latest table on
+        // this thread before xUnit starts the suite.
+        _ = "x".GetColumns ();
     }
 }
