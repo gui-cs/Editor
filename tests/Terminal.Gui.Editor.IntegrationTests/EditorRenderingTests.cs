@@ -27,10 +27,26 @@ public class EditorRenderingTests
     private static readonly InputInjectionOptions Direct = new () { Mode = InputInjectionMode.Direct };
     private static readonly DateTime BaseTime = new (2025, 1, 1, 12, 0, 0);
 
+    /// <summary>
+    ///     Pins Normal / Editable / Active to distinct 16-color attributes. AppFixture forces
+    ///     16-color ToAnsi so goldens match across OS; the default scheme can collapse Normal
+    ///     and Editable to the same White/Black pair under that quantization (Ubuntu CI).
+    /// </summary>
+    private static void ApplyDistinct16ColorRoles (Editor editor)
+    {
+        Scheme scheme = new (new Attribute (Color.White, Color.Black))
+        {
+            Editable = new Attribute (Color.DarkGray, Color.Black),
+            Active = new Attribute (Color.Black, Color.Gray)
+        };
+        editor.SetScheme (scheme);
+    }
+
     [Fact]
     public async Task Unselected_Text_Uses_Normal_Role_Not_Editable ()
     {
         await using AppFixture<EditorTestHost> fx = new (() => new EditorTestHost ("Hello"));
+        ApplyDistinct16ColorRoles (fx.Top.Editor);
         fx.Render ();
 
         Attribute normal = fx.Top.Editor.GetAttributeForRole (VisualRole.Normal);
@@ -50,6 +66,7 @@ public class EditorRenderingTests
     public async Task Selected_Text_Uses_Active_Role ()
     {
         await using AppFixture<EditorTestHost> fx = new (() => new EditorTestHost ("Hello"));
+        ApplyDistinct16ColorRoles (fx.Top.Editor);
         fx.Top.Editor.SetFocus ();
         fx.Top.Editor.CaretOffset = 0;
 
@@ -68,6 +85,7 @@ public class EditorRenderingTests
     public async Task Unselected_Tail_After_Selection_Uses_Normal_Role ()
     {
         await using AppFixture<EditorTestHost> fx = new (() => new EditorTestHost ("Hello"));
+        ApplyDistinct16ColorRoles (fx.Top.Editor);
         fx.Top.Editor.SetFocus ();
         fx.Top.Editor.CaretOffset = 0;
 

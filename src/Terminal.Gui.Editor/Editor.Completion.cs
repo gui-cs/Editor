@@ -450,14 +450,15 @@ public partial class Editor
             }
         };
 
-        // Accepted fires on BOTH Enter and mouse-click. Key-driven acceptance is handled
+        // Accepting fires on BOTH Enter and mouse-click. Key-driven acceptance is handled
         // explicitly by HandleCompletionKey (Enter/Tab) — calling AcceptCompletion here for
         // keys double-handled Enter and leaked a trailing newline — so keys only sync the
         // selected index (like ValueChanged above). Mouse clicks are different in TG 2.5:
         // the screen-filling Popover overlay routes popup clicks to the ListView, so the
         // Editor's OnMouseEvent/HandleCompletionMouse never sees them — accept here when
-        // the Accept came from a mouse binding.
-        _completionListView.Accepted += (sender, args) =>
+        // the Accept came from a mouse binding. Mark Handled so Popover does not bridge
+        // Command.Accept to the Editor Target (that would submit a hosting dialog).
+        _completionListView.Accepting += (sender, args) =>
         {
             if (args.Context?.Value is int idx)
             {
@@ -478,6 +479,7 @@ public partial class Editor
             }
 
             AcceptCompletion ();
+            args.Handled = true;
         };
     }
 
