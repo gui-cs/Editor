@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using Terminal.Gui.Configuration;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.Text;
+using Terminal.Gui.ViewBase;
 
 namespace Terminal.Gui.Editor.IntegrationTests.Testing;
 
@@ -38,6 +39,25 @@ internal static class TestEnvironment
         // cached Menu/Dialog instances in place.
         LoadHardCodedSchemes.Invoke (null, null);
         CapturePristineSchemes ();
+    }
+
+    /// <summary>
+    ///     Pins a clone of the captured hardcoded scheme on <paramref name="view" /> so
+    ///     later <see cref="SchemeManager" /> races cannot change its draw colors.
+    /// </summary>
+    internal static void PinPristineScheme (View view, string schemeName)
+    {
+        ArgumentNullException.ThrowIfNull (view);
+
+        lock (PristineLock)
+        {
+            CapturePristineSchemes ();
+
+            if (_pristineSchemes is { } map && map.TryGetValue (schemeName, out Scheme? scheme))
+            {
+                view.SetScheme (new Scheme (scheme));
+            }
+        }
     }
 
     /// <summary>

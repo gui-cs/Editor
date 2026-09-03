@@ -26,6 +26,7 @@ public sealed class FindReplaceDialogTests
         // Open Find dialog via the Editor's FindRequested event path — but since we can't
         // run a nested modal in tests, construct the dialog directly and Begin it.
         using FindReplaceDialog dialog = new (fx.Top.Editor, false);
+        TestEnvironment.PinPristineScheme (dialog, "Dialog");
         SessionToken? session = fx.App.Begin (dialog);
 
         try
@@ -47,6 +48,7 @@ public sealed class FindReplaceDialogTests
             60, 20);
 
         using FindReplaceDialog dialog = new (fx.Top.Editor, true);
+        TestEnvironment.PinPristineScheme (dialog, "Dialog");
         SessionToken? session = fx.App.Begin (dialog);
 
         try
