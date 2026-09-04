@@ -123,7 +123,41 @@ public sealed partial class TedApp
     {
         var filePath = ShowOpenDialog ();
 
-        return !string.IsNullOrWhiteSpace (filePath) && OpenFileAsync (filePath).GetAwaiter ().GetResult ();
+        return !string.IsNullOrWhiteSpace (filePath) && RunSyncBridge (() => OpenFileAsync (filePath));
+    }
+
+    /// <summary>
+    ///     Synchronously loads <paramref name="filePath" /> into the editor, blocking without
+    ///     deadlocking on Terminal.Gui's main-loop <see cref="SynchronizationContext" /> (see
+    ///     <see cref="RunSyncBridge" />).
+    /// </summary>
+    internal bool OpenFileBlocking (string filePath)
+    {
+        return RunSyncBridge (() => OpenFileAsync (filePath));
+    }
+
+    /// <summary>
+    ///     Blocks on <paramref name="operation" /> without deadlocking on Terminal.Gui's
+    ///     <see cref="SynchronizationContext" />. Terminal.Gui 2.5 installs its main-loop context at
+    ///     <c>Init</c> (tui-cs/Terminal.Gui#5588); awaits inside <paramref name="operation" /> would
+    ///     otherwise post continuations to the very thread this method blocks. Clearing the ambient
+    ///     context for the call restores the pre-2.5 behavior (continuations run on the thread pool)
+    ///     while the synchronous prefix — including <see cref="TextDocument" /> owner-thread handoff —
+    ///     still runs on the calling thread.
+    /// </summary>
+    private bool RunSyncBridge (Func<Task<bool>> operation)
+    {
+        SynchronizationContext? previous = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext (null);
+
+        try
+        {
+            return operation ().GetAwaiter ().GetResult ();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext (previous);
+        }
     }
 
     /// <summary>Prompts for a file path, then asynchronously streams that file into the editor.</summary>
@@ -163,7 +197,7 @@ public sealed partial class TedApp
     /// <summary>Saves the editor text to the current file, or prompts for a path if the buffer is untitled.</summary>
     public bool SaveFile ()
     {
-        return CurrentFilePath is null ? SaveFileAs () : SaveFileAsync ().GetAwaiter ().GetResult ();
+        return CurrentFilePath is null ? SaveFileAs () : RunSyncBridge (() => SaveFileAsync ());
     }
 
     /// <summary>Asynchronously streams the editor text to the current file, or prompts for a path if untitled.</summary>
@@ -200,7 +234,7 @@ public sealed partial class TedApp
     {
         var filePath = ShowSaveDialog ();
 
-        return !string.IsNullOrWhiteSpace (filePath) && SaveFileAsAsync (filePath).GetAwaiter ().GetResult ();
+        return !string.IsNullOrWhiteSpace (filePath) && RunSyncBridge (() => SaveFileAsAsync (filePath));
     }
 
     private async Task<bool> SaveFileAsAsync (bool marshalToApp, CancellationToken cancellationToken = default)

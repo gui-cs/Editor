@@ -114,19 +114,69 @@ public partial class Editor : View
     }
 
     /// <summary>
-    ///     Gets or sets the document text. This overrides <see cref="View.Text" /> so that setting
-    ///     <c>editor.Text</c> writes to <see cref="Document" /> rather than the base View label.
+    ///     Gets or sets the document text. This hides <see cref="View.Text" /> (non-virtual since
+    ///     Terminal.Gui 2.5) so that <c>editor.Text</c> reads and writes <see cref="Document" />
+    ///     rather than the base View label. Setting through a polymorphic (<see cref="View" />)
+    ///     reference still syncs <see cref="Document" /> via <see cref="OnTextChanged" />.
     /// </summary>
-    public override string Text
+    public new string Text
     {
         get => Document?.Text ?? string.Empty;
         set
         {
+            // Raise View.TextChanging so subscribers holding a View reference can cancel.
+            if (OnTextChanging (value))
+            {
+                return;
+            }
+
             if (Document is { } doc)
             {
                 doc.Text = value;
             }
+
+            // Keep base View._text in sync so a polymorphic getter sees the same value.
+            SetTextDirect (value);
+
+            _ownTextSetterActive = true;
+
+            try
+            {
+                RaiseTextChanged ();
+            }
+            finally
+            {
+                // Reset even when a TextChanged subscriber throws — a stuck flag would
+                // silently disable Document sync for every later polymorphic base set.
+                _ownTextSetterActive = false;
+            }
         }
+    }
+
+    /// <summary>Tracks whether the <c>new Text</c> setter is active to avoid redundant sync in <see cref="OnTextChanged" />.</summary>
+    private bool _ownTextSetterActive;
+
+    /// <inheritdoc />
+    /// <remarks>
+    ///     Syncs <see cref="Document" /> when <see cref="View.Text" /> is set through a polymorphic
+    ///     (<see cref="View" />) reference, ensuring the document stays consistent.
+    /// </remarks>
+    protected override void OnTextChanged ()
+    {
+        // Skip sync when called from our own `new Text` setter — it already updated the Document.
+        if (_ownTextSetterActive)
+        {
+            base.OnTextChanged ();
+
+            return;
+        }
+
+        if (Document is { } doc)
+        {
+            doc.Text = base.Text;
+        }
+
+        base.OnTextChanged ();
     }
 
     /// <summary>The backing <see cref="TextDocument" />. Setting this rewires change handlers and clamps the caret.</summary>

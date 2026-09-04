@@ -532,6 +532,8 @@ public class EditorCompletionTests
     {
         using IApplication app = Application.Create ();
         app.Init (DriverRegistry.Names.ANSI);
+        app.Driver!.SetScreenSize (80,
+            25); // TG 2.5's ANSI driver sizes async; fix the size so layout geometry is deterministic.
         Runnable top = new ();
 
         // "he" → [hello, help, helm]. We click index 1 ("help").
@@ -549,10 +551,12 @@ public class EditorCompletionTests
         editor.NotifyCompletionAfterInsert ();
         Assert.True (editor.IsCompletionActive);
 
-        // Lay the popover out so its screen Frame is valid before we hit-test against it.
+        // Lay the popover out so the popup's screen frame is valid before we hit-test against it.
+        // TG 2.5's Popover fills the screen; the visible popup is its ContentView (the ListView).
         app.LayoutAndDraw (true);
-        View popover = (View)app.Popovers!.GetActivePopover ()!;
-        Rectangle frame = popover.Frame;
+        Popover<ListView, CompletionItem?> popover =
+            (Popover<ListView, CompletionItem?>)app.Popovers!.GetActivePopover ()!;
+        Rectangle frame = popover.ContentView!.FrameToScreen ();
 
         // HandleCompletionMouse maps clickedIdx = ScreenPosition.Y - Frame.Y, so Frame.Y + 1
         // is the second item.
@@ -577,6 +581,8 @@ public class EditorCompletionTests
     {
         using IApplication app = Application.Create ();
         app.Init (DriverRegistry.Names.ANSI);
+        app.Driver!.SetScreenSize (80,
+            25); // TG 2.5's ANSI driver sizes async; fix the size so layout geometry is deterministic.
         Runnable top = new ();
 
         Editor editor = new ()
@@ -593,9 +599,11 @@ public class EditorCompletionTests
         editor.NotifyCompletionAfterInsert ();
         Assert.True (editor.IsCompletionActive);
 
+        // TG 2.5's Popover fills the screen; the visible popup is its ContentView (the ListView).
         app.LayoutAndDraw (true);
-        View popover = (View)app.Popovers!.GetActivePopover ()!;
-        Rectangle frame = popover.Frame;
+        Popover<ListView, CompletionItem?> popover =
+            (Popover<ListView, CompletionItem?>)app.Popovers!.GetActivePopover ()!;
+        Rectangle frame = popover.ContentView!.FrameToScreen ();
 
         var before = editor.Document!.Text;
 
@@ -620,6 +628,8 @@ public class EditorCompletionTests
     {
         using IApplication app = Application.Create ();
         app.Init (DriverRegistry.Names.ANSI);
+        app.Driver!.SetScreenSize (80,
+            25); // TG 2.5's ANSI driver sizes async; fix the size so layout geometry is deterministic.
         Runnable top = new ();
 
         Editor editor = new ()
@@ -636,13 +646,16 @@ public class EditorCompletionTests
         editor.NotifyCompletionAfterInsert ();
         Assert.True (editor.IsCompletionActive);
 
+        // TG 2.5's Popover fills the screen; the visible popup is its ContentView (the ListView).
         app.LayoutAndDraw (true);
-        View popover = (View)app.Popovers!.GetActivePopover ()!;
+        Popover<ListView, CompletionItem?> popover =
+            (Popover<ListView, CompletionItem?>)app.Popovers!.GetActivePopover ()!;
+        Rectangle popupFrame = popover.ContentView!.Frame;
 
         // 4 wide chars = 8 display columns. Char-count math would yield ~6 (< 8).
         Assert.True (
-            popover.Frame.Width >= 8,
-            $"Popup width {popover.Frame.Width} should be >= the 8 display columns of \"你好世界\"");
+            popupFrame.Width >= 8,
+            $"Popup width {popupFrame.Width} should be >= the 8 display columns of \"你好世界\"");
     }
 
     // #10: ShowCompletion and NotifyCompletionAfterInsert share a body but must keep one

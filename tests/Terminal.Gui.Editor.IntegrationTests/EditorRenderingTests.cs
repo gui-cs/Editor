@@ -38,8 +38,12 @@ public class EditorRenderingTests
 
         // Precondition: this test is only meaningful if Normal and Editable differ in the
         // active scheme. If they don't, the visual bug can't manifest and the assertion below
-        // would pass spuriously.
-        Assert.NotEqual (normal, editable);
+        // would pass spuriously. Force16Colors can collapse both to White/Black (Ubuntu CI).
+        // Do not SetScheme to force them apart: that mutates a shared scheme and leaks into
+        // parallel snapshot tests.
+        Assert.SkipUnless (
+            normal != editable,
+            "Normal and Editable collapse to the same 16-color Attribute under Force16Colors.");
 
         Cell cell = fx.Driver.Contents![0, 0];
         Assert.Equal ("H", cell.Grapheme);
@@ -77,7 +81,9 @@ public class EditorRenderingTests
 
         Attribute normal = fx.Top.Editor.GetAttributeForRole (VisualRole.Normal);
         Attribute editable = fx.Top.Editor.GetAttributeForRole (VisualRole.Editable);
-        Assert.NotEqual (normal, editable);
+        Assert.SkipUnless (
+            normal != editable,
+            "Normal and Editable collapse to the same 16-color Attribute under Force16Colors.");
 
         // Cells past the selection (column index >= 2) should be Normal, not Editable.
         Cell tail = fx.Driver.Contents![0, 2];

@@ -3,17 +3,15 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
 using Terminal.Gui.App;
-using Terminal.Gui.Configuration;
 
 namespace Ted;
 
-#pragma warning disable CS0618 // Keep legacy CM attributes until Terminal.Gui fully removes CM.
-
 /// <summary>
-///     ted's persisted editor settings. Microsoft.Extensions.Configuration is the primary read path:
+///     ted's persisted editor settings. Microsoft.Extensions.Configuration is the read path:
 ///     startup loads <c>~/.tui/ted.config.json</c> and applies the values to these static properties
-///     before <see cref="TedApp" /> is constructed. Legacy CM attributes are retained only so older
-///     Terminal.Gui builds can still apply the previous <see cref="AppSettingsScope" /> format.
+///     before <see cref="TedApp" /> is constructed. Terminal.Gui 2.5 removed the legacy
+///     ConfigurationManager; <see cref="Apply" /> still migrates the old flat
+///     <c>"EditorSettings.*"</c> and CM <c>"AppSettings"</c> shapes on read.
 ///     <para>
 ///         <see cref="Save(string)" /> writes the MEC-native shape:
 ///         <c>"EditorSettings": { "WordWrap": true }</c>. Other top-level keys a user may have added
@@ -26,63 +24,54 @@ internal static class EditorSettings
 {
     internal const string SectionName = "EditorSettings";
 
-    [ConfigurationProperty (Scope = typeof (AppSettingsScope))]
     public static bool LineNumbers
     {
         get => Defaults.LineNumbers;
         set => Defaults.LineNumbers = value;
     }
 
-    [ConfigurationProperty (Scope = typeof (AppSettingsScope))]
     public static bool FoldIndicators
     {
         get => Defaults.FoldIndicators;
         set => Defaults.FoldIndicators = value;
     }
 
-    [ConfigurationProperty (Scope = typeof (AppSettingsScope))]
     public static bool WordWrap
     {
         get => Defaults.WordWrap;
         set => Defaults.WordWrap = value;
     }
 
-    [ConfigurationProperty (Scope = typeof (AppSettingsScope))]
     public static bool ShowTabs
     {
         get => Defaults.ShowTabs;
         set => Defaults.ShowTabs = value;
     }
 
-    [ConfigurationProperty (Scope = typeof (AppSettingsScope))]
     public static int IndentSize
     {
         get => Defaults.IndentSize;
         set => Defaults.IndentSize = value;
     }
 
-    [ConfigurationProperty (Scope = typeof (AppSettingsScope))]
     public static bool ConvertTabsToSpaces
     {
         get => Defaults.ConvertTabsToSpaces;
         set => Defaults.ConvertTabsToSpaces = value;
     }
 
-    [ConfigurationProperty (Scope = typeof (AppSettingsScope))]
     public static bool AutoIndent
     {
         get => Defaults.AutoIndent;
         set => Defaults.AutoIndent = value;
     }
 
-    [ConfigurationProperty (Scope = typeof (AppSettingsScope))]
     public static bool Scrollbars
     {
         get => Defaults.Scrollbars;
         set => Defaults.Scrollbars = value;
     }
 
-    [ConfigurationProperty (Scope = typeof (AppSettingsScope))]
     public static bool AutoComplete
     {
         get => Defaults.AutoComplete;
@@ -283,5 +272,3 @@ internal static class EditorSettings
         public bool AutoComplete { get; set; }
     }
 }
-
-#pragma warning restore CS0618

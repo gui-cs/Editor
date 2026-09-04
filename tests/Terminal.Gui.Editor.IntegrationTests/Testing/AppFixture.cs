@@ -25,7 +25,7 @@ namespace Terminal.Gui.Editor.IntegrationTests.Testing;
 ///         <c>Application.Init()</c> is that each <see cref="IApplication" /> is
 ///         <see cref="System.Threading.ThreadLocal{T}" />-isolated. xUnit runs test collections in
 ///         parallel; never call <c>Application.Init()</c> (the static, process-global form) from a
-///         test, never enable <c>ConfigurationManager</c>, and never mutate process-global statics
+///         test, never mutate the shared <c>TuiConfigurationBuilder</c> facades, and never mutate process-global statics
 ///         that Terminal.Gui itself reads (<c>Logging.Logger</c>, <c>Trace.EnabledCategories</c>,
 ///         etc.). Tests that legitimately must do so opt out via
 ///         <c>[CollectionDefinition(name, DisableParallelization = true)]</c>; see
@@ -54,11 +54,25 @@ public sealed class AppFixture<TRunnable> : IAsyncDisposable
         App = Application.Create ();
         App.Init (DriverRegistry.Names.ANSI);
 
+        // Pin 16-color ToAnsi so goldens match across OS. TG 2.5 emits truecolor RGB when
+        // SupportsTrueColor is true (Windows/macOS CI) and 16-color SGR when it is not (Linux).
+        App.Driver!.Force16Colors = true;
+
         // Resize via the driver — same path TG's UnitTestsParallelizable use. Setting `App.Screen`
         // directly hangs on Windows CI runners that lack a real console.
         App.Driver!.SetScreenSize (width, height);
 
         Top = factory ();
+
+        // Per-view pin only. Do not rewrite SchemeManager from parallel fixtures
+        // (that races Init/draw and overwrites ThemeDropDown tests). Editor snapshots
+        // inherit this Base clone instead of the process-global table.
+        if (Top is EditorTestHost host)
+        {
+            TestEnvironment.PinPristineScheme (host, "Base");
+            TestEnvironment.PinPristineScheme (host.Editor, "Base");
+        }
+
         _session = App.Begin (Top) ??
                    throw new InvalidOperationException ("Application.Begin returned null — session was cancelled.");
     }

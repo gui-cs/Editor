@@ -38,7 +38,7 @@ For a user-facing editor built on this library, se [clet](https:/github.com/tui-
 
 `Editor` is a `View`. The standard TG machinery applies:
 
-- **Commands + keybindings.** All editor actions are `Command` bindings, remappable via `KeyBindings` or ConfigurationManager.
+- **Commands + keybindings.** All editor actions are `Command` bindings, remappable via `KeyBindings` or `TuiConfigurationBuilder`.
 - **Themes.** Colors come from the active `Scheme`; switch themes at runtime and the editor reflows.
 - **Layout.** `Pos` / `Dim` constraints; `Padding` / `Border` / `Margin` adornments (the gutter is a `View` inside `Padding`).
 - **Scrollbars.** Set `ViewportSettings = ViewportSettingsFlags.HasScrollBars`.
@@ -100,7 +100,7 @@ For a user-facing editor built on this library, se [clet](https:/github.com/tui-
 
 ### Default keybindings
 
-These are the *defaults*. They are `Command`-bound and remappable via TG's `KeyBindings` API or ConfigurationManager.
+These are the *defaults*. They are `Command`-bound and remappable via TG's `KeyBindings` API or `TuiConfigurationBuilder`.
 
 | Command | Default key | Notes |
 |---|---|---|
@@ -135,7 +135,7 @@ Install the package (requires the .NET 10 SDK and Terminal.Gui):
 dotnet add package Terminal.Gui.Editor
 ```
 
-Drop the editor into a Terminal.Gui app. `Editor` is just a `View`, so it gets TG's layout, scheme, scrollbars, and Configuration Manager for free:
+Drop the editor into a Terminal.Gui app. `Editor` is just a `View`, so it gets TG's layout, scheme, scrollbars, and `TuiConfigurationBuilder` for free:
 
 ```csharp
 using Terminal.Gui.App;
@@ -146,7 +146,8 @@ using Terminal.Gui.Highlighting;
 using Terminal.Gui.ViewBase;
 
 // Pick up themes / keymaps / preferences from the user's TG config.
-ConfigurationManager.Enable (ConfigLocations.All);
+TuiConfigurationBuilder config = new ("MyEditor");
+config.ApplyToStaticFacades ();
 
 using IApplication app = Application.Create ();
 app.Init ();

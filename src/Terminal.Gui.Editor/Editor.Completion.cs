@@ -186,9 +186,10 @@ public partial class Editor
             return false;
         }
 
-        // Map the click's screen position to the Popover's content area.
-        // The ListView's frame within the Popover determines the hit region.
-        Rectangle popoverScreenFrame = _completionPopover.Frame;
+        // Map the click's screen position to the popup's content area. Terminal.Gui 2.5's
+        // Popover is a screen-filling transparent overlay; the visible popup rectangle is
+        // the ContentView (the ListView), positioned in screen coordinates.
+        Rectangle popoverScreenFrame = _completionListView.FrameToScreen ();
 
         if (mouse.ScreenPosition.X < popoverScreenFrame.X
             || mouse.ScreenPosition.X >= popoverScreenFrame.Right
@@ -449,16 +450,36 @@ public partial class Editor
             }
         };
 
-        // Accepted fires on BOTH Enter and mouse-click. Acceptance itself is driven
-        // explicitly — HandleCompletionKey for Enter/Tab, HandleCompletionMouse for a
-        // click — so this only syncs the selected index (like ValueChanged above).
-        // Calling AcceptCompletion here double-handled Enter and leaked a trailing newline.
-        _completionListView.Accepted += (_, args) =>
+        // Accepting fires on BOTH Enter and mouse-click. Key-driven acceptance is handled
+        // explicitly by HandleCompletionKey (Enter/Tab) — calling AcceptCompletion here for
+        // keys double-handled Enter and leaked a trailing newline — so keys only sync the
+        // selected index (like ValueChanged above). Mouse clicks are different in TG 2.5:
+        // the screen-filling Popover overlay routes popup clicks to the ListView, so the
+        // Editor's OnMouseEvent/HandleCompletionMouse never sees them — accept here when
+        // the Accept came from a mouse binding. Mark Handled so Popover does not bridge
+        // Command.Accept to the Editor Target (that would submit a hosting dialog).
+        _completionListView.Accepting += (sender, args) =>
         {
             if (args.Context?.Value is int idx)
             {
                 CompletionSelectedIndex = idx;
             }
+
+            if (args.Context?.Binding is not MouseBinding { MouseEvent: { Position: { } clickPosition } })
+            {
+                return;
+            }
+
+            // The click's Position is ListView-viewport-relative; honor scroll via Viewport.Y.
+            var clickedIdx = clickPosition.Y + ((ListView)sender!).Viewport.Y;
+
+            if (clickedIdx >= 0 && clickedIdx < _completionItems.Count)
+            {
+                CompletionSelectedIndex = clickedIdx;
+            }
+
+            AcceptCompletion ();
+            args.Handled = true;
         };
     }
 

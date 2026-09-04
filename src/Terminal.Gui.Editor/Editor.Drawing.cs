@@ -16,6 +16,17 @@ public partial class Editor
     private List<int>? _cachedVisibleLineNumbers;
 
     /// <inheritdoc />
+    /// <remarks>
+    ///     <see cref="Editor" /> renders the document itself in <see cref="OnDrawingContent" />; the
+    ///     base <see cref="View.Text" /> mirror kept by the <c>new Text</c> setter must not also be
+    ///     drawn by the base text pass.
+    /// </remarks>
+    protected override bool OnDrawingText (DrawContext? context)
+    {
+        return true;
+    }
+
+    /// <inheritdoc />
     protected override bool OnDrawingContent (DrawContext? context)
     {
         if (_document is null)

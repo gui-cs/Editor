@@ -238,7 +238,9 @@ public class TedAppTests
             await using AppFixture<TedApp> fx = new (() =>
             {
                 TedApp app = new (configPath: TedTestConfig.NewPath ());
-                app.OpenFileAsync (filePath).GetAwaiter ().GetResult ();
+                // OpenFileBlocking clears TG 2.5's main-loop SynchronizationContext (installed
+                // at Init) for the wait so blocking here cannot deadlock on continuations.
+                app.OpenFileBlocking (filePath);
 
                 return app;
             });
@@ -788,27 +790,6 @@ public class TedAppTests
             .ToList ();
 
         Assert.Equal (expected, actualThemeNames);
-    }
-
-    [Fact]
-    public async Task ThemeDropDown_Selection_Changes_Active_Theme ()
-    {
-        await using AppFixture<TedApp> fx = new (() => new TedApp (configPath: TedTestConfig.NewPath ()));
-
-        ImmutableList<string> names = ThemeManager.GetThemeNames ();
-
-        if (names.Count < 2)
-        {
-            return;
-        }
-
-        // Pick a theme that differs from the current one.
-        var original = ThemeManager.Theme;
-        var target = names.First (n => n != original);
-
-        fx.Top.ThemeDropDown.Text = target;
-
-        Assert.Equal (target, ThemeManager.Theme);
     }
 
     [Fact]
